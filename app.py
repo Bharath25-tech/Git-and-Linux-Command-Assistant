@@ -1,5 +1,6 @@
 import time
 import html
+import traceback
 import streamlit as st
 
 # =========================================================
@@ -273,7 +274,12 @@ def load_rag():
     return rag
 
 
-rag = load_rag()
+try:
+    rag = load_rag()
+except Exception as e:
+    st.error(f"Failed to load the knowledge base. {type(e).__name__}: {e}")
+    st.code(traceback.format_exc())
+    st.stop()
 
 # =========================================================
 # SESSION STATE
@@ -589,7 +595,7 @@ if question:
                 }
             )
 
-        except Exception:
+        except Exception as e:
 
             # Avoid retaining a failed request as a completed exchange.
             if (
@@ -601,9 +607,10 @@ if question:
 
             st.error(
                 "Unable to process your question. "
-                "Check your LLM configuration and document index, "
-                "then try again."
+                f"{type(e).__name__}: {e}"
             )
+            with st.expander("Technical details"):
+                st.code(traceback.format_exc())
 
 # =========================================================
 # FOOTER
