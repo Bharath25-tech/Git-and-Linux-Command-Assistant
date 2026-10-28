@@ -1,0 +1,46 @@
+# Python environment
+
+venv/
+.venv/
+env/
+
+# Python cache
+
+**pycache**/
+*.py[cod]
+.pytest_cache/
+
+# Environment variables and secrets
+
+.env
+.env.*
+
+# Vector databases and generated embeddings
+
+chroma_db/
+vectorstore/
+chroma.sqlite3/
+
+# Logs
+
+*.log
+
+# IDE and operating system files
+
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Large model files
+
+*.h5
+*.keras
+*.pt
+*.pth
+*.onnx
+
+# Temporary files
+
+*.tmp
+*.bak

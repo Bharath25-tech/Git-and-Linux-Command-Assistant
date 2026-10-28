@@ -1,0 +1,750 @@
+# Linux Command Knowledge Base
+
+Format note for RAG: every entry starts with a `###` heading and is self-contained (purpose, syntax, options, examples, warnings, related commands). Split chunks on `###` headings, and keep the `##` category as metadata.
+
+---
+
+## CATEGORY 1: NAVIGATION AND FILESYSTEM BASICS
+
+### pwd — print working directory
+**Purpose:** Shows the full absolute path of the directory you are currently in.
+**Syntax:** `pwd [-L | -P]`
+**Options:** `-L` prints the logical path (may include symlinks, default). `-P` prints the physical path with symlinks resolved.
+**Example:** `pwd` prints `/home/satish/projects`.
+**Related:** cd, ls
+
+### cd — change directory
+**Purpose:** Moves you into another directory.
+**Syntax:** `cd [directory]`
+**Examples:**
+- `cd /var/log` go to an absolute path.
+- `cd projects/app` go to a relative path.
+- `cd ..` go up one level.
+- `cd ../..` go up two levels.
+- `cd ~` or just `cd` go to your home directory.
+- `cd -` go back to the previous directory.
+**Notes:** If the path has spaces, quote it: `cd "My Folder"`. Error "No such file or directory" means the path is wrong or misspelled. Error "Permission denied" means you lack execute (x) permission on that directory.
+**Related:** pwd, ls, pushd, popd
+
+### ls — list directory contents
+**Purpose:** Lists files and folders.
+**Syntax:** `ls [options] [path]`
+**Common options:**
+- `-l` long format (permissions, owner, size, date).
+- `-a` include hidden files (names starting with a dot).
+- `-h` human-readable sizes (use with -l).
+- `-t` sort by modification time, newest first.
+- `-r` reverse order.
+- `-S` sort by size, largest first.
+- `-R` recursive listing.
+- `-d */` list only directories.
+- `-i` show inode numbers.
+**Examples:**
+- `ls -lah` long listing with hidden files and readable sizes.
+- `ls -lt | head` ten most recently modified items.
+- `ls -d */` only subdirectories.
+**Related:** tree, find, stat
+
+### tree — display directory structure as a tree
+**Purpose:** Shows nested directory structure visually.
+**Syntax:** `tree [options] [directory]`
+**Options:** `-L N` limit depth to N levels. `-a` show hidden. `-d` directories only. `-I "pattern"` ignore matching names. `-h` show sizes.
+**Example:** `tree -L 2 -I "node_modules|.git"` shows two levels and skips node_modules and .git.
+**Notes:** May need installation: `sudo apt install tree` (Debian/Ubuntu), `sudo dnf install tree` (Fedora/RHEL).
+
+### mkdir — make directories
+**Purpose:** Creates new directories.
+**Syntax:** `mkdir [options] name...`
+**Options:** `-p` create parent directories as needed and do not error if it exists. `-m MODE` set permissions on creation.
+**Examples:**
+- `mkdir logs`
+- `mkdir -p project/src/utils` creates the whole chain.
+- `mkdir dir1 dir2 dir3` creates several at once.
+**Related:** rmdir, touch
+
+### rmdir — remove empty directories
+**Purpose:** Deletes directories only if they are empty.
+**Syntax:** `rmdir [-p] directory`
+**Notes:** Fails with "Directory not empty" if files exist. Use `rm -r` for non-empty directories.
+
+### touch — create empty file or update timestamp
+**Purpose:** Creates an empty file if it does not exist, or updates its modified time if it does.
+**Syntax:** `touch [options] file...`
+**Examples:** `touch notes.txt`, `touch a.txt b.txt c.txt`, `touch -d "2026-01-01 10:00" file.txt`.
+
+### cp — copy files and directories
+**Purpose:** Copies files or directories.
+**Syntax:** `cp [options] source destination`
+**Options:** `-r` or `-R` recursive (required for directories). `-i` prompt before overwrite. `-u` copy only when source is newer. `-v` verbose. `-p` preserve mode, ownership, timestamps. `-a` archive mode (recursive and preserves everything).
+**Examples:**
+- `cp a.txt b.txt`
+- `cp -r src/ backup/`
+- `cp -a /data /backup/data`
+- `cp *.log /tmp/logs/`
+**Warning:** cp overwrites the destination silently without `-i`.
+**Related:** mv, rsync, scp
+
+### mv — move or rename
+**Purpose:** Moves files/directories or renames them.
+**Syntax:** `mv [options] source destination`
+**Options:** `-i` prompt before overwrite. `-n` never overwrite. `-v` verbose.
+**Examples:** `mv old.txt new.txt` (rename), `mv file.txt ~/Documents/` (move), `mv *.jpg images/`.
+**Related:** cp, rename
+
+### rm — remove files and directories
+**Purpose:** Deletes files or directories permanently (no recycle bin).
+**Syntax:** `rm [options] file...`
+**Options:** `-r` recursive (directories). `-f` force, no prompts, ignore missing files. `-i` prompt for each file. `-v` verbose.
+**Examples:**
+- `rm file.txt`
+- `rm -r old_folder/`
+- `rm -rf build/`
+- `rm -i *.tmp`
+**Warning:** `rm -rf` is irreversible. Never run `rm -rf /` or `rm -rf ~` or an `rm -rf $VAR/` where `$VAR` could be empty. Always double check the path, and consider `ls` first with the same glob.
+**Related:** rmdir, trash-cli
+
+### ln — create links
+**Purpose:** Creates hard links or symbolic (soft) links.
+**Syntax:** `ln [-s] target link_name`
+**Examples:**
+- `ln -s /opt/app/bin/app /usr/local/bin/app` symbolic link.
+- `ln original.txt hardlink.txt` hard link.
+**Notes:** A symlink points to a path and breaks if the target is deleted. A hard link points to the same inode and survives deletion of the other name. Hard links cannot cross filesystems or link to directories.
+
+### stat — detailed file information
+**Purpose:** Shows size, permissions, inode, and access/modify/change times.
+**Syntax:** `stat file`
+**Example:** `stat -c "%n %s %U" file.txt` custom format showing name, size, owner.
+
+### file — detect file type
+**Purpose:** Identifies what kind of data a file contains regardless of extension.
+**Example:** `file image.png` prints "PNG image data".
+
+---
+
+## CATEGORY 2: VIEWING AND EDITING FILE CONTENTS
+
+### cat — concatenate and print files
+**Purpose:** Prints file contents to the terminal or combines files.
+**Syntax:** `cat [options] file...`
+**Options:** `-n` number all lines. `-b` number non-blank lines. `-A` show non-printing characters.
+**Examples:** `cat file.txt`, `cat a.txt b.txt > combined.txt`, `cat >> log.txt` (append typed text, end with Ctrl+D).
+**Notes:** For large files prefer less.
+
+### less — page through a file
+**Purpose:** Scroll through large files without loading all at once.
+**Syntax:** `less [options] file`
+**Keys:** Space/f next page, b previous page, `/text` search forward, `?text` search backward, n next match, N previous match, g top, G bottom, q quit.
+**Options:** `-N` line numbers, `-S` no line wrapping, `+F` follow mode like tail -f.
+
+### head — first lines
+**Syntax:** `head [-n N] file`
+**Examples:** `head file.txt` (first 10 lines), `head -n 20 file.txt`, `head -c 100 file.txt` (first 100 bytes).
+
+### tail — last lines
+**Syntax:** `tail [-n N] [-f] file`
+**Examples:** `tail -n 50 app.log`, `tail -f /var/log/syslog` (follow live), `tail -F app.log` (follow even if file is rotated).
+
+### nano — simple terminal editor
+**Purpose:** Beginner-friendly text editor.
+**Keys:** Ctrl+O save, Ctrl+X exit, Ctrl+W search, Ctrl+K cut line, Ctrl+U paste, Ctrl+G help.
+**Example:** `nano ~/.bashrc`
+
+### vim — modal text editor
+**Purpose:** Powerful editor available almost everywhere (vi is the minimal version).
+**Modes:** Normal (default, for commands), Insert (typing text), Visual (selecting), Command-line (starting with `:`).
+**Essential keys:** `i` enter insert mode, `Esc` back to normal, `:w` save, `:q` quit, `:wq` or `ZZ` save and quit, `:q!` quit without saving, `dd` delete line, `yy` copy line, `p` paste, `u` undo, `Ctrl+r` redo, `/text` search, `n` next match, `:%s/old/new/g` replace all, `gg` top, `G` bottom, `:set number` show line numbers.
+**How to exit vim:** press Esc, then type `:q!` and Enter to discard changes, or `:wq` to save.
+
+### wc — word, line, byte count
+**Syntax:** `wc [-l] [-w] [-c] file`
+**Examples:** `wc -l file.txt` (line count), `ls | wc -l` (count items).
+
+### sort — sort lines
+**Options:** `-r` reverse, `-n` numeric, `-u` unique, `-k N` sort by column N, `-t,` set delimiter.
+**Example:** `sort -t, -k2 -n data.csv`.
+
+### uniq — filter adjacent duplicates
+**Options:** `-c` count occurrences, `-d` only duplicates, `-u` only unique.
+**Note:** Input must be sorted first. Example: `sort file.txt | uniq -c | sort -nr` gives frequency count.
+
+### cut — extract columns
+**Options:** `-d` delimiter, `-f` fields, `-c` characters.
+**Example:** `cut -d: -f1 /etc/passwd` lists all usernames.
+
+### diff — compare files
+**Syntax:** `diff [options] file1 file2`
+**Options:** `-u` unified format, `-r` recursive for directories, `-y` side by side, `-q` only report whether files differ.
+**Example:** `diff -u old.conf new.conf`.
+
+### tr — translate or delete characters
+**Examples:** `echo "hello" | tr a-z A-Z` gives HELLO. `tr -d '\r' < dos.txt > unix.txt` strips Windows carriage returns.
+
+---
+
+## CATEGORY 3: SEARCHING
+
+### grep — search text with patterns
+**Purpose:** Finds lines matching a pattern in files or input.
+**Syntax:** `grep [options] pattern [file...]`
+**Common options:**
+- `-i` ignore case.
+- `-r` or `-R` recursive search through directories.
+- `-n` show line numbers.
+- `-v` invert match (lines that do NOT match).
+- `-c` count matching lines.
+- `-l` list only filenames with matches.
+- `-w` match whole words.
+- `-E` extended regex (same as egrep).
+- `-A N` / `-B N` / `-C N` show N lines after, before, around a match.
+- `--include="*.py"` limit to file types.
+- `--exclude-dir=node_modules` skip directories.
+**Examples:**
+- `grep -rn "TODO" src/` find TODOs with line numbers.
+- `grep -i "error" app.log`
+- `grep -E "error|warning" app.log`
+- `ps aux | grep nginx`
+- `grep -v "^#" config.conf` hide comment lines.
+**Related:** egrep, rg (ripgrep), awk, sed
+
+### find — search for files by attributes
+**Purpose:** Locates files and directories by name, type, size, time, permissions, owner, and can run actions on results.
+**Syntax:** `find [path] [expression]`
+**Tests:** `-name "*.txt"` (case sensitive), `-iname` (case insensitive), `-type f` (files), `-type d` (directories), `-size +100M` (larger than 100 MB), `-mtime -7` (modified in last 7 days), `-mmin -30` (last 30 minutes), `-user name`, `-perm 644`, `-empty`.
+**Actions:** `-delete`, `-exec command {} \;`, `-exec command {} +`, `-print`.
+**Examples:**
+- `find . -name "*.log"`
+- `find /home -type f -size +500M`
+- `find . -type f -mtime +30 -delete` delete files older than 30 days (test without -delete first).
+- `find . -name "*.py" -exec grep -l "import os" {} +`
+- `find / -name "nginx.conf" 2>/dev/null` hide permission errors.
+**Related:** locate, grep, fd
+
+### locate — fast filename search using an index
+**Syntax:** `locate [options] pattern`
+**Notes:** Uses a database updated by `sudo updatedb`. Faster than find but may be stale. Option `-i` ignores case.
+
+### which / whereis / type — locate a command
+**Examples:** `which python3` shows the executable path, `whereis ls` shows binary, source, and man page, `type cd` shows whether a command is a builtin, alias, or file.
+
+### awk — pattern scanning and processing
+**Purpose:** Processes text line by line, splitting into fields. Fields are `$1`, `$2`, ..., whole line is `$0`.
+**Examples:**
+- `awk '{print $1}' file.txt` print the first column.
+- `awk -F: '{print $1, $3}' /etc/passwd` custom delimiter.
+- `awk '$3 > 100 {print $0}' data.txt` filter by condition.
+- `awk '{sum += $2} END {print sum}' data.txt` sum a column.
+
+### sed — stream editor
+**Purpose:** Edits text by rules: substitute, delete, insert.
+**Examples:**
+- `sed 's/old/new/g' file.txt` replace all occurrences and print.
+- `sed -i 's/old/new/g' file.txt` edit file in place (use `-i.bak` to keep a backup).
+- `sed -n '5,10p' file.txt` print lines 5 to 10.
+- `sed '/pattern/d' file.txt` delete matching lines.
+- `sed '1d' file.txt` delete first line.
+
+### xargs — build commands from input
+**Examples:** `find . -name "*.tmp" | xargs rm`, `cat urls.txt | xargs -n 1 curl -O`. Use `-print0` with find and `xargs -0` to handle filenames with spaces: `find . -name "*.txt" -print0 | xargs -0 wc -l`.
+
+---
+
+## CATEGORY 4: PERMISSIONS AND OWNERSHIP
+
+### Understanding permissions
+`ls -l` shows output like `-rwxr-xr-- 1 satish dev 4096 Oct 28 10:00 script.sh`.
+- First character: file type (`-` file, `d` directory, `l` symlink).
+- Next nine characters: three groups of rwx for owner, group, others.
+- r = read (4), w = write (2), x = execute (1). On directories, x means you can enter it, r means you can list it.
+- Octal example: 755 = rwxr-xr-x, 644 = rw-r--r--, 600 = rw-------, 700 = rwx------.
+
+### chmod — change permissions
+**Syntax:** `chmod [options] mode file`
+**Symbolic:** `u` user/owner, `g` group, `o` others, `a` all; `+` add, `-` remove, `=` set.
+**Examples:**
+- `chmod +x script.sh` make executable.
+- `chmod 644 file.txt`
+- `chmod 755 script.sh`
+- `chmod u+rwx,g+rx,o-rwx file`
+- `chmod -R 755 folder/` recursive.
+**Common error:** "Permission denied" when running a script means it lacks the execute bit: run `chmod +x script.sh` then `./script.sh`.
+
+### chown — change owner and group
+**Syntax:** `chown [options] user[:group] file`
+**Examples:** `sudo chown satish file.txt`, `sudo chown satish:dev file.txt`, `sudo chown -R www-data:www-data /var/www`.
+
+### chgrp — change group
+**Example:** `sudo chgrp developers project/`
+
+### umask — default permission mask
+**Purpose:** Sets which permissions are removed from newly created files. Typical umask 022 yields files 644 and directories 755.
+
+### sudo — run a command as another user (usually root)
+**Examples:** `sudo apt update`, `sudo -u postgres psql`, `sudo -i` (root shell), `sudo !!` (rerun previous command with sudo).
+**Notes:** Configured via `/etc/sudoers`, edit only with `sudo visudo`. Message "user is not in the sudoers file" means the account lacks sudo rights.
+
+### su — switch user
+**Examples:** `su - username` (login shell as that user), `su -` (become root, needs the root password).
+
+### Special permissions
+- setuid (4000) runs a file as its owner, `chmod u+s file`.
+- setgid (2000) runs as the group, or makes new files in a directory inherit the group, `chmod g+s dir`.
+- sticky bit (1000) on a directory only lets file owners delete their own files, e.g. `/tmp`, `chmod +t dir`.
+
+---
+
+## CATEGORY 5: USERS AND GROUPS
+
+### whoami / id / groups
+`whoami` prints the current username. `id` prints UID, GID, and groups. `groups` lists group membership.
+
+### useradd / adduser — create a user
+**Examples:**
+- `sudo adduser alice` (Debian/Ubuntu interactive, creates home).
+- `sudo useradd -m -s /bin/bash alice` (low-level, `-m` creates home, `-s` sets shell).
+- `sudo passwd alice` set password.
+
+### usermod — modify a user
+**Examples:** `sudo usermod -aG sudo alice` add to the sudo group (always use `-a` with `-G`, otherwise existing groups are replaced). `sudo usermod -s /bin/zsh alice`. `sudo usermod -L alice` lock account.
+
+### userdel — delete a user
+**Example:** `sudo userdel -r alice` (also removes home directory).
+
+### groupadd / groupdel
+`sudo groupadd developers`, `sudo gpasswd -a alice developers`.
+
+### passwd — change password
+`passwd` changes your own. `sudo passwd alice` changes someone else's.
+
+### who / w / last
+`who` lists logged-in users, `w` shows what they are doing, `last` shows login history.
+
+---
+
+## CATEGORY 6: PROCESSES AND SYSTEM MONITORING
+
+### ps — snapshot of processes
+**Examples:** `ps aux` all processes with details, `ps -ef` full format, `ps aux | grep python`, `ps -p 1234`.
+**Columns in ps aux:** USER, PID, %CPU, %MEM, VSZ, RSS, TTY, STAT, START, TIME, COMMAND.
+
+### top — live process view
+**Keys:** `q` quit, `k` kill a PID, `M` sort by memory, `P` sort by CPU, `1` per-core CPU, `u` filter by user.
+**Related:** htop (friendlier, install with package manager), btop.
+
+### kill — send signal to a process
+**Syntax:** `kill [-signal] PID`
+**Signals:** `SIGTERM` (15, polite stop, default), `SIGKILL` (9, force kill, cannot be caught), `SIGHUP` (1, reload/hangup), `SIGSTOP` (19, pause), `SIGCONT` (18, resume), `SIGINT` (2, same as Ctrl+C).
+**Examples:** `kill 1234`, `kill -9 1234`, `kill -l` list signals.
+**Tip:** Try plain `kill` first, use `-9` only if the process will not exit.
+
+### killall / pkill — kill by name
+**Examples:** `killall firefox`, `pkill -f "python app.py"`, `pkill -u alice`.
+
+### pgrep — find PIDs by name
+`pgrep nginx`, `pgrep -a python` shows full command lines.
+
+### Background and foreground jobs
+- `command &` run in the background.
+- `Ctrl+Z` suspend the foreground job.
+- `bg` resume a suspended job in the background.
+- `fg` bring a job to the foreground.
+- `jobs` list jobs.
+- `nohup command &` keep running after you close the terminal; output goes to `nohup.out`.
+- `disown` detach a job from the shell.
+
+### nice / renice — process priority
+`nice -n 10 command` start with lower priority (higher number is lower priority, range -20 to 19). `renice 5 -p 1234` change a running process.
+
+### free — memory usage
+`free -h` shows total, used, free, and available memory in human units.
+
+### df — disk space of filesystems
+`df -h` human-readable, `df -hT` include filesystem type. Look at the "Use%" column. 100% on `/` can cause strange failures.
+
+### du — disk usage of files/directories
+**Examples:** `du -sh folder/` total size, `du -h --max-depth=1 /var | sort -h` find which subdirectory is biggest, `du -ah . | sort -rh | head -20`.
+
+### uptime / uname / hostname
+`uptime` shows load averages, `uname -a` kernel info, `hostname` machine name, `cat /etc/os-release` distribution info.
+
+### lscpu / lsblk / lsusb / lspci
+Hardware info: CPU, block devices (disks and partitions), USB devices, PCI devices.
+
+### vmstat / iostat / sar
+Performance statistics for memory, CPU, and I/O (`iostat` and `sar` come from the sysstat package).
+
+### lsof — list open files
+**Examples:** `lsof -i :8080` which process uses port 8080, `lsof -u alice`, `lsof /var/log/syslog`.
+**Use case:** "Address already in use" error, find the PID with `lsof -i :PORT` then `kill` it.
+
+### dmesg — kernel ring buffer messages
+`dmesg | tail`, `sudo dmesg -T` with human timestamps. Useful for hardware, driver, and out-of-memory kill messages.
+
+### journalctl — systemd logs
+**Examples:** `journalctl -u nginx` logs for a service, `journalctl -f` follow live, `journalctl -xe` recent errors with explanation, `journalctl --since "1 hour ago"`, `journalctl -b` current boot, `journalctl -p err` errors only.
+
+---
+
+## CATEGORY 7: SERVICES (systemd)
+
+### systemctl — manage services
+**Examples:**
+- `sudo systemctl start nginx`
+- `sudo systemctl stop nginx`
+- `sudo systemctl restart nginx`
+- `sudo systemctl reload nginx` reload config without full restart.
+- `sudo systemctl enable nginx` start at boot.
+- `sudo systemctl disable nginx`
+- `sudo systemctl enable --now nginx` enable and start together.
+- `systemctl status nginx` state and recent log lines.
+- `systemctl is-active nginx`
+- `systemctl list-units --type=service --state=running`
+- `systemctl --failed` list failed units.
+- `sudo systemctl daemon-reload` after editing unit files.
+**Unit files:** custom services live in `/etc/systemd/system/name.service`.
+**Minimal example unit:**
+```
+[Unit]
+Description=My App
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /opt/app/main.py
+Restart=always
+User=satish
+
+[Install]
+WantedBy=multi-user.target
+```
+Then run `sudo systemctl daemon-reload && sudo systemctl enable --now myapp`.
+
+### cron and crontab — scheduled jobs
+**Edit:** `crontab -e`, **list:** `crontab -l`, **remove:** `crontab -r`.
+**Format:** `minute hour day-of-month month day-of-week command`.
+**Examples:**
+- `0 2 * * * /home/satish/backup.sh` every day at 02:00.
+- `*/15 * * * * script.sh` every 15 minutes.
+- `0 9 * * 1-5 script.sh` weekdays at 9:00.
+- `@reboot script.sh` at boot.
+**Tip:** Use absolute paths in cron, redirect output with `>> /tmp/job.log 2>&1`.
+
+### at — one-time scheduled job
+`echo "backup.sh" | at 23:00`, `atq` list, `atrm N` remove.
+
+---
+
+## CATEGORY 8: NETWORKING
+
+### ip — modern network configuration
+**Examples:** `ip addr` (or `ip a`) show IPs, `ip link` interfaces, `ip route` routing table, `sudo ip link set eth0 up`, `sudo ip addr add 192.168.1.50/24 dev eth0`.
+**Replaces:** ifconfig, route (old net-tools).
+
+### ping — test connectivity
+`ping -c 4 google.com` send 4 packets then stop. Without `-c` it runs until Ctrl+C.
+
+### ss / netstat — sockets and ports
+**Examples:** `ss -tulpn` listening TCP/UDP ports with process names (needs sudo for process info), `ss -s` summary. `-t` TCP, `-u` UDP, `-l` listening, `-p` process, `-n` numeric.
+
+### curl — transfer data with URLs
+**Options:** `-O` save with remote filename, `-o file` save as name, `-L` follow redirects, `-I` headers only, `-X POST` method, `-H "Header: value"`, `-d 'data'` body, `-s` silent, `-v` verbose, `-u user:pass`.
+**Examples:**
+- `curl https://example.com`
+- `curl -L -o file.zip https://example.com/file.zip`
+- `curl -X POST -H "Content-Type: application/json" -d '{"a":1}' https://api.example.com/items`
+
+### wget — download files
+`wget URL`, `wget -c URL` resume, `wget -r -np URL` recursive download, `wget -O name URL`.
+
+### ssh — secure remote login
+**Examples:** `ssh user@host`, `ssh -p 2222 user@host`, `ssh -i ~/.ssh/key.pem user@host`, `ssh -L 8080:localhost:80 user@host` local port forwarding.
+**Key setup:** `ssh-keygen -t ed25519 -C "email"` generate a key, `ssh-copy-id user@host` install public key on server.
+**Permissions:** `~/.ssh` should be 700 and private keys 600, otherwise ssh refuses them ("UNPROTECTED PRIVATE KEY FILE").
+**Config:** `~/.ssh/config` entries with Host, HostName, User, IdentityFile.
+
+### scp — secure copy over ssh
+`scp file.txt user@host:/path/`, `scp user@host:/path/file.txt .`, `scp -r folder user@host:/path/`.
+
+### rsync — efficient sync and backup
+**Options:** `-a` archive, `-v` verbose, `-z` compress, `-P` progress and resume, `--delete` remove files not in source, `-n` dry run.
+**Examples:** `rsync -avzP src/ user@host:/dest/`, `rsync -a --delete src/ backup/`. A trailing slash on the source copies contents, without it copies the directory itself.
+
+### dig / nslookup / host — DNS lookup
+`dig example.com`, `dig +short example.com`, `dig MX example.com`, `nslookup example.com`.
+
+### traceroute / tracepath / mtr
+Show the network hops to a host. `mtr host` combines ping and traceroute.
+
+### ufw — simple firewall (Ubuntu)
+`sudo ufw status`, `sudo ufw enable`, `sudo ufw allow 22/tcp`, `sudo ufw deny 80`, `sudo ufw delete allow 80`. Always allow SSH before enabling on a remote server.
+
+### nmap — port scanner
+`nmap -sV host` service versions. Only scan systems you own or have permission to test.
+
+---
+
+## CATEGORY 9: PACKAGE MANAGEMENT
+
+### apt — Debian / Ubuntu
+**Examples:** `sudo apt update` refresh package lists, `sudo apt upgrade` upgrade installed packages, `sudo apt install pkg`, `sudo apt remove pkg`, `sudo apt purge pkg` (also remove config), `sudo apt autoremove`, `apt search keyword`, `apt show pkg`, `apt list --installed`.
+**Error "Unable to locate package":** run `sudo apt update`, check spelling, or enable the right repository.
+**Error "Could not get lock":** another apt/dpkg process is running; wait for it.
+
+### dpkg — low level .deb tool
+`sudo dpkg -i file.deb`, `dpkg -l | grep name`, `dpkg -L pkg` list files, `sudo apt -f install` fix broken dependencies.
+
+### dnf / yum — Fedora, RHEL, CentOS, Rocky
+`sudo dnf install pkg`, `sudo dnf remove pkg`, `sudo dnf update`, `dnf search keyword`, `rpm -qa` list installed rpm packages.
+
+### pacman — Arch Linux
+`sudo pacman -Syu` full system upgrade, `sudo pacman -S pkg` install, `sudo pacman -R pkg` remove, `pacman -Ss keyword` search.
+
+### snap and flatpak
+`sudo snap install name`, `snap list`, `flatpak install flathub app`, `flatpak run app`.
+
+### pip and python environments
+`python3 -m venv venv` create a virtual environment, `source venv/bin/activate` activate, `pip install -r requirements.txt`, `deactivate`. On newer Debian/Ubuntu, "externally-managed-environment" error means use a venv (or `pipx`) instead of system pip.
+
+---
+
+## CATEGORY 10: ARCHIVES AND COMPRESSION
+
+### tar — archive files
+**Options:** `-c` create, `-x` extract, `-t` list, `-v` verbose, `-f` archive filename (must be followed by the name), `-z` gzip, `-j` bzip2, `-J` xz, `-C dir` extract into directory.
+**Examples:**
+- `tar -czvf backup.tar.gz folder/` create compressed archive.
+- `tar -xzvf backup.tar.gz` extract.
+- `tar -xzvf backup.tar.gz -C /tmp/` extract elsewhere.
+- `tar -tzvf backup.tar.gz` list contents.
+
+### gzip / gunzip, bzip2, xz
+`gzip file` compresses and replaces the file, `gunzip file.gz`, `gzip -k file` keep original.
+
+### zip / unzip
+`zip -r archive.zip folder/`, `unzip archive.zip`, `unzip archive.zip -d target/`, `unzip -l archive.zip`.
+
+---
+
+## CATEGORY 11: DISKS, MOUNTING, AND STORAGE
+
+### lsblk — list block devices
+`lsblk -f` shows filesystems, labels, UUIDs, and mount points.
+
+### mount / umount
+`sudo mount /dev/sdb1 /mnt/usb`, `sudo umount /mnt/usb`, `mount | column -t`. Error "target is busy" on umount means a process is using it; find with `lsof +f -- /mnt/usb` or leave the directory.
+
+### fdisk / parted
+`sudo fdisk -l` list partitions. Creating and deleting partitions can destroy data; double check the device name.
+
+### mkfs — create filesystem
+`sudo mkfs.ext4 /dev/sdb1`. Warning: formats and erases the partition.
+
+### /etc/fstab — persistent mounts
+Each line: device, mount point, filesystem type, options, dump, pass. Prefer UUIDs from `blkid`. Test with `sudo mount -a` before rebooting. A bad fstab line can stop boot.
+
+### dd — low-level copy
+`sudo dd if=image.iso of=/dev/sdb bs=4M status=progress`. Warning: `of=` overwrites the target device with no confirmation; wrong target means data loss.
+
+### Swap
+`swapon --show`, `sudo fallocate -l 2G /swapfile`, `sudo chmod 600 /swapfile`, `sudo mkswap /swapfile`, `sudo swapon /swapfile`.
+
+---
+
+## CATEGORY 12: SHELL, REDIRECTION, AND PIPES
+
+### Redirection
+- `>` overwrite a file with stdout: `echo hi > file.txt`.
+- `>>` append: `echo hi >> file.txt`.
+- `<` read stdin from a file: `sort < names.txt`.
+- `2>` redirect stderr: `command 2> errors.txt`.
+- `2>&1` send stderr to wherever stdout goes: `command > all.txt 2>&1`.
+- `&>` redirect both (bash): `command &> all.txt`.
+- `/dev/null` discards output: `command > /dev/null 2>&1`.
+
+### Pipes and tee
+`command1 | command2` passes stdout of the first to the stdin of the second. `command | tee file.txt` writes to a file and the screen. `tee -a` appends. `echo "x" | sudo tee /etc/file` writes to a protected file (plain `sudo echo x > /etc/file` fails because the redirect runs as you).
+
+### Command chaining
+`a ; b` run both regardless, `a && b` run b only if a succeeds, `a || b` run b only if a fails. `$?` holds the last exit code (0 = success).
+
+### Variables and environment
+`NAME=value` (no spaces around `=`), `echo "$NAME"`, `export NAME=value` for child processes, `env` list environment, `printenv PATH`, `unset NAME`.
+**PATH:** `export PATH="$PATH:$HOME/bin"` add a directory. To make permanent, put it in `~/.bashrc` (or `~/.zshrc`), then run `source ~/.bashrc`.
+
+### alias
+`alias ll='ls -lah'`, `unalias ll`. Save in `~/.bashrc` to persist.
+
+### history
+`history`, `!!` repeat last command, `!123` run entry 123, `Ctrl+R` reverse search, `history -c` clear.
+
+### Globbing and quoting
+`*` any characters, `?` single character, `[abc]` set, `{a,b,c}` brace expansion (`mkdir dir_{1..3}`). Double quotes allow variable expansion, single quotes are literal, backslash escapes one character.
+
+### Keyboard shortcuts
+Ctrl+C interrupt, Ctrl+D end of input/logout, Ctrl+Z suspend, Ctrl+L clear screen, Ctrl+A start of line, Ctrl+E end of line, Ctrl+U delete to start, Ctrl+K delete to end, Ctrl+W delete previous word, Tab autocomplete.
+
+### man / --help / info
+`man ls` manual page (q to quit, `/word` to search), `ls --help`, `tldr tar` short examples (install tldr), `apropos keyword` search manual summaries.
+
+### Basic bash scripting
+```
+#!/bin/bash
+set -euo pipefail          # stop on errors, undefined variables, and pipe failures
+name="$1"
+if [ -z "$name" ]; then
+  echo "Usage: $0 name"; exit 1
+fi
+for f in *.txt; do
+  echo "Processing $f"
+done
+```
+Make it executable with `chmod +x script.sh` and run with `./script.sh arg`. Use `[[ ]]` for tests in bash, `$(command)` for command substitution, and always quote variables.
+
+---
+
+## CATEGORY 13: FILE TRANSFER, TEXT PROCESSING, AND MISC UTILITIES
+
+### date / cal
+`date +"%Y-%m-%d %H:%M:%S"`, `date -d "tomorrow"`, `timedatectl` show and set time zone.
+
+### echo / printf
+`echo "text"`, `echo -e "line1\nline2"`, `printf "%s\n" "text"` (more predictable).
+
+### watch — run a command repeatedly
+`watch -n 2 df -h` every 2 seconds.
+
+### screen / tmux — persistent terminal sessions
+**tmux:** `tmux new -s work` create, `Ctrl+b d` detach, `tmux ls` list, `tmux attach -t work` reattach, `Ctrl+b %` split vertically, `Ctrl+b "` split horizontally, `Ctrl+b arrow` move between panes, `Ctrl+b c` new window.
+**Use case:** keep long jobs running over SSH after disconnecting.
+
+### jq — process JSON
+`curl -s URL | jq '.items[0].name'`, `jq -r '.[] | .id' file.json`, `jq '.' file.json` pretty print.
+
+### sha256sum / md5sum — checksums
+`sha256sum file`, `sha256sum -c checksums.txt` verify downloads.
+
+### base64
+`echo "text" | base64`, `base64 -d file`.
+
+### env files and secrets
+Never commit secrets. Use environment variables or a secrets manager. Restrict secret files with `chmod 600`.
+
+### openssl
+`openssl rand -hex 32` random token, `openssl x509 -in cert.pem -text -noout` inspect a certificate.
+
+---
+
+## CATEGORY 14: TASK-BASED "HOW DO I" ANSWERS
+
+### How do I find which process is using a port?
+Run `sudo ss -tulpn | grep :8080` or `sudo lsof -i :8080`. Then stop it with `kill PID` (or `kill -9 PID` if it ignores SIGTERM).
+
+### How do I find the biggest files or folders eating disk space?
+Use `du -ah / 2>/dev/null | sort -rh | head -20`, or for one level `sudo du -h --max-depth=1 /var | sort -h`. For large files: `find / -type f -size +1G 2>/dev/null`. Interactive tool: `ncdu /`.
+
+### How do I check how much free memory and disk I have?
+Memory: `free -h`. Disk: `df -h`. CPU and per-process usage: `top` or `htop`.
+
+### How do I search for text inside all files in a folder?
+`grep -rn "text" .` with optional `--include="*.py"` to limit file types.
+
+### How do I replace text in many files?
+`grep -rl "old" . | xargs sed -i 's/old/new/g'`. Commit or back up first, or use `sed -i.bak`.
+
+### How do I run a command in the background and keep it alive after logout?
+`nohup command > out.log 2>&1 &` or use `tmux`/`screen`, or create a systemd service for long-term services.
+
+### How do I check if a service is running and see why it failed?
+`systemctl status service` then `journalctl -u service -xe`.
+
+### How do I make a script executable and run it?
+`chmod +x script.sh` then `./script.sh`. If it says "bad interpreter" or `^M`, fix Windows line endings with `sed -i 's/\r$//' script.sh`.
+
+### How do I add a user to the sudo group?
+`sudo usermod -aG sudo username` (Debian/Ubuntu) or `sudo usermod -aG wheel username` (RHEL/Fedora). User must log out and in again.
+
+### How do I extract a .tar.gz or .zip file?
+`tar -xzvf file.tar.gz` or `unzip file.zip`.
+
+### How do I copy files to a remote server?
+`scp file user@host:/path/` for simple copies, `rsync -avzP folder/ user@host:/path/` for large or repeated syncs.
+
+### How do I see the last 100 lines of a log and follow new lines?
+`tail -n 100 -f /var/log/app.log`.
+
+### How do I count lines, words, or files?
+`wc -l file`, `ls | wc -l`, `find . -type f | wc -l`.
+
+### How do I rename many files at once?
+`for f in *.txt; do mv "$f" "${f%.txt}.md"; done` or `rename 's/\.txt$/.md/' *.txt` (perl-based rename).
+
+### How do I delete files older than N days safely?
+Preview: `find /path -type f -mtime +30`. Then delete: `find /path -type f -mtime +30 -delete`.
+
+### How do I change my hostname?
+`sudo hostnamectl set-hostname newname`, then re-login.
+
+### How do I set the time zone?
+`sudo timedatectl set-timezone Asia/Kolkata`; list zones with `timedatectl list-timezones`.
+
+### How do I create a swap file when low on RAM?
+See the Swap entry: fallocate, chmod 600, mkswap, swapon, and add to `/etc/fstab` to persist.
+
+### How do I check which Linux distribution and kernel I am on?
+`cat /etc/os-release` and `uname -r`.
+
+### How do I update everything on Ubuntu/Debian?
+`sudo apt update && sudo apt upgrade -y`; for kernel and dependency changes use `sudo apt full-upgrade`.
+
+### How do I generate an SSH key and connect without a password?
+`ssh-keygen -t ed25519`, then `ssh-copy-id user@host`, then `ssh user@host`.
+
+### How do I recover from "disk full" problems?
+Check `df -h` and `df -i` (inodes). Clean apt cache `sudo apt clean`, old logs `sudo journalctl --vacuum-size=200M`, find big directories with `du`, remove unused Docker data with `docker system prune` (understand what it removes first).
+
+---
+
+## CATEGORY 15: COMMON ERRORS AND FIXES
+
+### "Permission denied"
+Cause: missing permission. Check with `ls -l`. Fix with `chmod`, `chown`, or `sudo`. For scripts add `+x`. For SSH keys use `chmod 600`.
+
+### "command not found"
+Cause: not installed, typo, or not in PATH. Check `which cmd`, `echo $PATH`; install the package (`sudo apt install pkg`) or run with `./` for local scripts.
+
+### "No such file or directory"
+Cause: wrong path or a script with the wrong interpreter line or Windows line endings. Verify with `ls` and `pwd`. Remove carriage returns with `dos2unix file` or `sed -i 's/\r$//' file`.
+
+### "Operation not permitted"
+Cause: immutable file (`lsattr`, `chattr -i`), or restricted operation needing root.
+
+### "Device or resource busy"
+Cause: a process is using a mount or file. Use `lsof` or `fuser -vm /mount`.
+
+### "Address already in use"
+Cause: another process holds the port. Find with `ss -tulpn | grep :PORT` and stop it.
+
+### "Argument list too long"
+Cause: the glob expands to too many files. Use `find . -name "*.log" -delete` or `find ... | xargs`.
+
+### "Killed" or out of memory
+Cause: the OOM killer ended the process. Check `dmesg | grep -i kill`, add swap, or reduce memory usage.
+
+### "E: Could not get lock /var/lib/dpkg/lock"
+Cause: another package manager is running. Wait, or check `ps aux | grep -E "apt|dpkg"`. Do not delete lock files unless you are sure nothing is running.
+
+### "Segmentation fault"
+Cause: program bug or incompatible libraries. Check logs, update the program, or run with a debugger (`gdb`).
+
+### "Connection refused" vs "Connection timed out"
+Refused: host reachable but nothing listening on that port (service down). Timed out: blocked by a firewall or wrong address. Test with `ping`, `nc -vz host port`, `curl -v`.
+
+---
+
+## CATEGORY 16: SAFETY CHECKLIST
+
+- Always preview destructive commands (`ls`, `find` without `-delete`, `rsync -n`) before running them.
+- Be careful with `rm -rf`, `dd`, `mkfs`, `chmod -R`, and `chown -R` on system directories.
+- Do not run `chmod -R 777`; grant only what is needed.
+- Do not pipe unknown scripts directly into a shell (`curl ... | sudo bash`) unless you trust and have inspected the source.
+- Keep backups before editing critical configs: `sudo cp file file.bak`.
+- Test `sshd_config`, `sudoers` (`visudo`), and `fstab` (`mount -a`) changes before closing your current session.
