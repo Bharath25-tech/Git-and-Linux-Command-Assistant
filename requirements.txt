@@ -10,3 +10,4 @@ sentence-transformers
 transformers
 torch
 huggingface-hub
+langchain-huggingface
