@@ -15,12 +15,6 @@ env/
 .env
 .env.*
 
-# Vector databases and generated embeddings
-
-chroma_db/
-vectorstore/
-chroma.sqlite3/
-
 # Logs
 
 *.log
